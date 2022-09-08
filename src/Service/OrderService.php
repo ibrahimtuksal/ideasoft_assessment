@@ -87,12 +87,12 @@ class OrderService
 
         if($promotion instanceof Promotion){
             $order->setDiscountPrice($order->getDiscountPrice() - $categoryTotalDiscount);
+            $this->entityManager->persist($promotion);
         }else{
             $order->setDiscountPrice($order->getTotalPrice() - $categoryTotalDiscount);
 
         }
 
-        $this->entityManager->persist($promotion);
         $this->entityManager->persist($order);
         $this->entityManager->flush();
 
@@ -146,7 +146,8 @@ class OrderService
                 'name' => $order->getCustomer()->getName(),
             ],
             'items' => $item,
-            'total' => $order->getTotalPrice()
+            'totalPrice' => $order->getTotalPrice(),
+            'discountPrice' => $order->getDiscountPrice()
         ];
     }
 }
