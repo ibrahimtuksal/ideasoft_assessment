@@ -40,9 +40,25 @@ class Order
      */
     private $deletedAt;
 
+    /**
+     * @ORM\Column(type="string")
+     */
+    private $totalPrice;
+
+    /**
+     * @ORM\Column(type="string", nullable=true)
+     */
+    private $discountPrice;
+
+    /**
+     * @ORM\OneToMany(targetEntity=Promotion::class, mappedBy="orderId")
+     */
+    private $promotions;
+
     public function __construct()
     {
         $this->orderItems = new ArrayCollection();
+        $this->promotions = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -91,18 +107,6 @@ class Order
         return $this;
     }
 
-    public function getTotal()
-    {
-        $total = 0.00;
-        /** @var OrderItems $orderItem */
-        foreach ($this->getOrderItems() as $orderItem){
-            for ($i = 1; $i <= $orderItem->getQuantity(); $i++){
-                $total = $total + $orderItem->getProduct()->getPrice();
-            }
-        }
-        return $total;
-    }
-
     public function getCreatedAt(): ?\DateTimeInterface
     {
         return $this->createdAt;
@@ -123,6 +127,60 @@ class Order
     public function setDeletedAt(?\DateTimeInterface $deletedAt): self
     {
         $this->deletedAt = $deletedAt;
+
+        return $this;
+    }
+
+    public function getTotalPrice(): ?string
+    {
+        return $this->totalPrice;
+    }
+
+    public function setTotalPrice(string $totalPrice): self
+    {
+        $this->totalPrice = $totalPrice;
+
+        return $this;
+    }
+
+    public function getDiscountPrice(): ?string
+    {
+        return $this->discountPrice;
+    }
+
+    public function setDiscountPrice(?string $discountPrice): self
+    {
+        $this->discountPrice = $discountPrice;
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, Promotion>
+     */
+    public function getPromotions(): Collection
+    {
+        return $this->promotions;
+    }
+
+    public function addPromotion(Promotion $promotion): self
+    {
+        if (!$this->promotions->contains($promotion)) {
+            $this->promotions[] = $promotion;
+            $promotion->setOrderId($this);
+        }
+
+        return $this;
+    }
+
+    public function removePromotion(Promotion $promotion): self
+    {
+        if ($this->promotions->removeElement($promotion)) {
+            // set the owning side to null (unless already changed)
+            if ($promotion->getOrderId() === $this) {
+                $promotion->setOrderId(null);
+            }
+        }
 
         return $this;
     }
