@@ -32,7 +32,7 @@ class ResponseService
      */
     private function serialize($data): string
     {
-        return $this->serializer->serialize($data, 'json');
+        return $this->serializer->serialize($data, 'json', ['groups' => ['normal']]);
     }
 
 }
