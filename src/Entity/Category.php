@@ -28,9 +28,15 @@ class Category
      */
     private $products;
 
+    /**
+     * @ORM\OneToMany(targetEntity=PromotionCategory::class, mappedBy="category")
+     */
+    private $promotionCategories;
+
     public function __construct()
     {
         $this->products = new ArrayCollection();
+        $this->promotionCategories = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -73,6 +79,36 @@ class Category
         if ($this->products->removeElement($product)) {
             if ($product->getCategory() === $this) {
                 $product->setCategory(null);
+            }
+        }
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, PromotionCategory>
+     */
+    public function getPromotionCategories(): Collection
+    {
+        return $this->promotionCategories;
+    }
+
+    public function addPromotionCategory(PromotionCategory $promotionCategory): self
+    {
+        if (!$this->promotionCategories->contains($promotionCategory)) {
+            $this->promotionCategories[] = $promotionCategory;
+            $promotionCategory->setCategory($this);
+        }
+
+        return $this;
+    }
+
+    public function removePromotionCategory(PromotionCategory $promotionCategory): self
+    {
+        if ($this->promotionCategories->removeElement($promotionCategory)) {
+            // set the owning side to null (unless already changed)
+            if ($promotionCategory->getCategory() === $this) {
+                $promotionCategory->setCategory(null);
             }
         }
 

@@ -5,6 +5,9 @@ namespace App\DataFixtures;
 use App\Entity\Category;
 use App\Entity\Customer;
 use App\Entity\Product;
+use App\Entity\PromotionBasket;
+use App\Entity\PromotionCategory;
+use App\Entity\PromotionCategoryStatus;
 use Doctrine\Bundle\FixturesBundle\Fixture;
 use Doctrine\Persistence\ObjectManager;
 
@@ -78,6 +81,42 @@ class AppFixtures extends Fixture
         $manager->persist($product3);
         $manager->persist($product4);
         $manager->persist($product5);
+
+        // görev 2 entityleri
+        $promotionCategoryStatus1 = new PromotionCategoryStatus();
+        $promotionCategoryStatus1->setName("THE_CHEAPEST");
+        $promotionCategoryStatus2 = new PromotionCategoryStatus();
+        $promotionCategoryStatus2->setName("RANDOM");
+        $promotionCategoryStatus3 = new PromotionCategoryStatus();
+        $promotionCategoryStatus3->setName("CHOSEN");
+
+        $manager->persist($promotionCategoryStatus1);
+        $manager->persist($promotionCategoryStatus2);
+        $manager->persist($promotionCategoryStatus3);
+
+        $promotionBasket = new PromotionBasket();
+        $promotionBasket->setMoneyThan("1000");
+        $promotionBasket->setPercent("10");
+
+        $manager->persist($promotionBasket);
+
+        $promotionCategory1 = new PromotionCategory();
+        $promotionCategory1
+            ->setCategory($category2)
+            ->setQuantity(6)
+            ->setPercent("100")
+            ->setStatus($promotionCategoryStatus2)
+            ->setHowManyProducts(1);
+        $promotionCategory2 = new PromotionCategory();
+        $promotionCategory2
+            ->setCategory($category1)
+            ->setQuantity(2)
+            ->setPercent("20")
+            ->setStatus($promotionCategoryStatus1)
+            ->setHowManyProducts(1);
+
+        $manager->persist($promotionCategory1);
+        $manager->persist($promotionCategory2);
 
         $manager->flush();
     }
