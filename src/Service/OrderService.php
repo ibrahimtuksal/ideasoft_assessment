@@ -92,4 +92,30 @@ class OrderService
             ]
         ];
     }
+
+    public function list(Order $order): array
+    {
+        $item = [];
+
+        /** @var OrderItems $orderItem */
+        foreach ($order->getOrderItems() as $orderItem){
+            $item[] = [
+                'product' => $orderItem->getProduct()->getName(),
+                'unitPrice' => $orderItem->getProduct()->getPrice(),
+                'quantity' => $orderItem->getQuantity(),
+                'total' => $orderItem->getProduct()->getPrice() * $orderItem->getQuantity()
+            ];
+        }
+
+        return [
+            'id' => $order->getId(),
+            'createdAt' => $order->getCreatedAt()->format("Y-m-d H:i"),
+            'customer' => [
+                'id' => $order->getCustomer()->getId(),
+                'name' => $order->getCustomer()->getName(),
+            ],
+            'items' => $item,
+            'total' => $order->getTotalPrice()
+        ];
+    }
 }

@@ -52,7 +52,7 @@ class ApiController extends AbstractController
      * @Route("/delete/{order}", methods={"GET"})
      * @OA\Response(
      *     response=200,
-     *     description="Returns the resulting order",
+     *     description="Returns information about the deleted order",
      * )
      * @OA\Tag(name="Order")
      * @param int $order
@@ -70,4 +70,25 @@ class ApiController extends AbstractController
         return $this->responseService->create($this->orderService->delete($order));
     }
 
+    /**
+     * @Route("/list/{order}", methods={"GET"})
+     * @OA\Response(
+     *     response=200,
+     *     description="Returns the selected order",
+     * )
+     * @OA\Tag(name="Order")
+     * @param int $order
+     * @return Response
+     */
+    public function listing(int $order)
+    {
+        /** @var Order $order */
+        $order = $this->entityManager->getRepository(Order::class)->findOneBy(['deletedAt' => null, 'id' => $order]);
+
+        if (!$order instanceof Order){
+            return $this->responseService->create("ORDER_NOT_FOUND");
+        }
+
+        return $this->responseService->create($this->orderService->list($order));
+    }
 }
