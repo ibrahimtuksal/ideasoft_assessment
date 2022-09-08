@@ -62,19 +62,12 @@ class ApiController extends AbstractController
     {
         /** @var Order $order */
         $order = $this->entityManager->getRepository(Order::class)->findOneBy(['deletedAt' => null, 'id' => $order]);
+
         if (!$order instanceof Order){
             return $this->responseService->create("ORDER_NOT_FOUND");
         }
-        $order->setDeletedAt(new \DateTime());
-        $this->entityManager->flush();
-        return $this->responseService->create([
-            'success' => true,
-            'message' => 'ORDER_DELETED',
-            'response' => [
-                'id' => $order->getId(),
-                'createdAt' => $order->getCreatedAt()->format("Y-m-d H:i"),
-            ]
-        ]);
+
+        return $this->responseService->create($this->orderService->delete($order));
     }
 
 }

@@ -76,4 +76,20 @@ class OrderService
                 "total" => $order->getTotal()
             ];
     }
+
+    public function delete(Order $order): array
+    {
+        $order->setDeletedAt(new \DateTime());
+
+        $this->entityManager->flush();
+
+        return [
+            'success' => true,
+            'message' => 'ORDER_DELETED',
+            'response' => [
+                'id' => $order->getId(),
+                'createdAt' => $order->getCreatedAt()->format("Y-m-d H:i"),
+            ]
+        ];
+    }
 }
