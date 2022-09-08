@@ -14,10 +14,15 @@ class ResponseService
         $this->serializer = $serializer;
     }
 
-    public function create($data): Response
+    public function create($data, bool $json = false): Response
     {
+        if ($json){
+            $data = json_decode($data, true);
+        }
+
         $response = new Response($this->serialize($data));
         $response->headers->set('Content-Type', 'application/json');
+
         return $response;
     }
 

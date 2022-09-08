@@ -2,7 +2,7 @@
 
 namespace App\Controller\Api;
 
-use App\Entity\Customer;
+use App\Service\OrderService;
 use App\Service\ResponseService;
 use Doctrine\ORM\EntityManagerInterface;
 use OpenApi\Annotations as OA;
@@ -10,38 +10,42 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
-use Symfony\Component\Serializer\SerializerInterface;
 
 /**
- * @Route("/api")
+ * @Route("/order")
  */
 class ApiController extends AbstractController
 {
 
     private EntityManagerInterface $entityManager;
-    private SerializerInterface $serializer;
     private ResponseService $responseService;
+    private OrderService $orderService;
 
-    public function __construct(EntityManagerInterface $entityManager, SerializerInterface $serializer, ResponseService $responseService)
+    public function __construct(EntityManagerInterface $entityManager, ResponseService $responseService, OrderService $orderService)
     {
         $this->entityManager = $entityManager;
-        $this->serializer = $serializer;
         $this->responseService = $responseService;
+        $this->orderService = $orderService;
     }
 
     /**
-     * @Route("/test", methods={"GET"})
+     * @Route("/add", methods={"POST"})
      * @OA\Response(
      *     response=200,
-     *     description="Returns the rewards of an user",
+     *     description="Returns the resulting order",
      * )
      * @OA\Tag(name="Order")
      */
-    public function test(Request $request)
+    public function add(Request $request): Response
     {
-        /** @var Customer $customer */
-        $customer = $this->entityManager->getRepository(Customer::class)->find(5);
-        return $this->responseService->create($customer);
+        try {
+            $response = $this->orderService->create(json_decode($request->getContent(), true));
+        }catch (\Exception $e){
+            return $this->responseService->create($e->getMessage());
+        }
+
+        return $this->responseService->create($response);
+
     }
 
 }
