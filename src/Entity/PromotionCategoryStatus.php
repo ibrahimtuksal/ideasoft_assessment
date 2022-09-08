@@ -13,7 +13,7 @@ use Doctrine\ORM\Mapping as ORM;
 class PromotionCategoryStatus
 {
 
-    CONST THE_CHEAPEST = 1, RANDOM = 2, CHOSEN = 3;
+    CONST THE_CHEAPEST = 1, ONE_FREE = 2, CHOSEN = 3;
 
     /**
      * @ORM\Id

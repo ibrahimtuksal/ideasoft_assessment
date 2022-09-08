@@ -5,6 +5,7 @@ namespace App\Service;
 use App\Entity\Order;
 use App\Entity\OrderItems;
 use App\Entity\Product;
+use App\Entity\Promotion;
 use App\Type\OrderType;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpKernel\Exception\UnprocessableEntityHttpException;
@@ -40,7 +41,7 @@ class OrderService
         $order->setCustomer($orderType->customer);
         $order->setCreatedAt(new \DateTime());
 
-        $items = [];
+        $itemInfo = [];
         $totalPrice = 0;
         foreach ($orderType->items as $item){
             $product = $this->entityManager->getRepository(Product::class)->find($item['productId']);
@@ -64,7 +65,7 @@ class OrderService
                 ->setProduct($product)
                 ->setQuantity($item['quantity']);
 
-            $items[] = [
+            $itemInfo[] = [
                 "productId"=> $product->getId(),
                 "quantity"=> $item['quantity'],
                 "unitPrice"=> $product->getPrice(),
@@ -73,17 +74,25 @@ class OrderService
 
             $this->entityManager->persist($orderItem);
         }
+
+
         $order->setTotalPrice($totalPrice);
 
         $orderType->customer->setRevenue($orderType->customer->getRevenue() + $totalPrice);
-
+        $categoryTotalDiscount = $this->promotionService->categoryControl($order);
         $promotion = $this->promotionService->basketControl($order);
-        if (!is_null($promotion)){
-            $this->entityManager->persist($promotion);
-        }
+
         $order
             ->setDiscountPrice(is_null($promotion) ? $promotion : $totalPrice - ( ($totalPrice / 100) * $promotion->getBasket()->getPercent() ));
 
+        if($promotion instanceof Promotion){
+            $order->setDiscountPrice($order->getDiscountPrice() - $categoryTotalDiscount);
+        }else{
+            $order->setDiscountPrice($order->getTotalPrice() - $categoryTotalDiscount);
+
+        }
+
+        $this->entityManager->persist($promotion);
         $this->entityManager->persist($order);
         $this->entityManager->flush();
 
@@ -91,10 +100,11 @@ class OrderService
             [
                 "id" => $order->getId(),
                 "customerId"=> $orderType->customer->getId(),
-                "items"=> $items,
+                "items"=> $itemInfo,
                 "totalPrice" => $order->getTotalPrice(),
                 "discountPrice" => $order->getDiscountPrice(),
-                "promotionId" => is_null($promotion) ? $promotion : $promotion->getId()
+                "promotionId" => is_null($promotion) ? $promotion : $promotion->getId(),
+                "categoryPromotionTotalDiscount" => $categoryTotalDiscount
             ];
     }
 
