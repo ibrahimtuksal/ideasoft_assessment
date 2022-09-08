@@ -2,6 +2,7 @@
 
 namespace App\Controller\Api;
 
+use App\Entity\Order;
 use App\Service\OrderService;
 use App\Service\ResponseService;
 use Doctrine\ORM\EntityManagerInterface;
@@ -45,7 +46,35 @@ class ApiController extends AbstractController
         }
 
         return $this->responseService->create($response);
+    }
 
+    /**
+     * @Route("/delete/{order}", methods={"GET"})
+     * @OA\Response(
+     *     response=200,
+     *     description="Returns the resulting order",
+     * )
+     * @OA\Tag(name="Order")
+     * @param int $order
+     * @return Response
+     */
+    public function delete(int $order): Response
+    {
+        /** @var Order $order */
+        $order = $this->entityManager->getRepository(Order::class)->findOneBy(['deletedAt' => null, 'id' => $order]);
+        if (!$order instanceof Order){
+            return $this->responseService->create("ORDER_NOT_FOUND");
+        }
+        $order->setDeletedAt(new \DateTime());
+        $this->entityManager->flush();
+        return $this->responseService->create([
+            'success' => true,
+            'message' => 'ORDER_DELETED',
+            'response' => [
+                'id' => $order->getId(),
+                'createdAt' => $order->getCreatedAt()->format("Y-m-d H:i"),
+            ]
+        ]);
     }
 
 }
