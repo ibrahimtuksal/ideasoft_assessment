@@ -15,7 +15,7 @@ Projeyi klonlayın
 Proje dizinine gidin
 
 ```bash
-  cd my-project
+  cd ideasoft_assessment
 ```
 
 Gerekli paketleri yükleyin
