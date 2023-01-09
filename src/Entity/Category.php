@@ -2,6 +2,8 @@
 
 namespace App\Entity;
 
+use App\Entity\Discount\Discount;
+use App\Entity\Discount\DiscountCategory;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
@@ -11,6 +13,8 @@ use Doctrine\ORM\Mapping as ORM;
  */
 class Category
 {
+    use Timestamp;
+
     /**
      * @ORM\Id
      * @ORM\GeneratedValue
@@ -24,19 +28,25 @@ class Category
     private $name;
 
     /**
-     * @ORM\OneToMany(targetEntity=Product::class, mappedBy="category")
+     * @ORM\OneToMany(targetEntity=Discount::class, mappedBy="applicableCategory")
      */
-    private $products;
+    private $discounts;
 
     /**
-     * @ORM\OneToMany(targetEntity=PromotionCategory::class, mappedBy="category")
+     * @ORM\OneToMany(targetEntity=DiscountCategory::class, mappedBy="category")
      */
-    private $promotionCategories;
+    private $discountCategories;
+
+    /**
+     * @ORM\OneToMany(targetEntity=OrderItem::class, mappedBy="category")
+     */
+    private $orderItems;
 
     public function __construct()
     {
-        $this->products = new ArrayCollection();
-        $this->promotionCategories = new ArrayCollection();
+        $this->discounts = new ArrayCollection();
+        $this->discountCategories = new ArrayCollection();
+        $this->orderItems = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -57,28 +67,29 @@ class Category
     }
 
     /**
-     * @return Collection<int, Product>
+     * @return Collection<int, Discount>
      */
-    public function getProducts(): Collection
+    public function getDiscounts(): Collection
     {
-        return $this->products;
+        return $this->discounts;
     }
 
-    public function addProduct(Product $product): self
+    public function addDiscount(Discount $discount): self
     {
-        if (!$this->products->contains($product)) {
-            $this->products[] = $product;
-            $product->setCategory($this);
+        if (!$this->discounts->contains($discount)) {
+            $this->discounts[] = $discount;
+            $discount->setApplicableCategory($this);
         }
 
         return $this;
     }
 
-    public function removeProduct(Product $product): self
+    public function removeDiscount(Discount $discount): self
     {
-        if ($this->products->removeElement($product)) {
-            if ($product->getCategory() === $this) {
-                $product->setCategory(null);
+        if ($this->discounts->removeElement($discount)) {
+            // set the owning side to null (unless already changed)
+            if ($discount->getApplicableCategory() === $this) {
+                $discount->setApplicableCategory(null);
             }
         }
 
@@ -86,29 +97,59 @@ class Category
     }
 
     /**
-     * @return Collection<int, PromotionCategory>
+     * @return Collection<int, DiscountCategory>
      */
-    public function getPromotionCategories(): Collection
+    public function getDiscountCategories(): Collection
     {
-        return $this->promotionCategories;
+        return $this->discountCategories;
     }
 
-    public function addPromotionCategory(PromotionCategory $promotionCategory): self
+    public function addDiscountCategory(DiscountCategory $discountCategory): self
     {
-        if (!$this->promotionCategories->contains($promotionCategory)) {
-            $this->promotionCategories[] = $promotionCategory;
-            $promotionCategory->setCategory($this);
+        if (!$this->discountCategories->contains($discountCategory)) {
+            $this->discountCategories[] = $discountCategory;
+            $discountCategory->setCategory($this);
         }
 
         return $this;
     }
 
-    public function removePromotionCategory(PromotionCategory $promotionCategory): self
+    public function removeDiscountCategory(DiscountCategory $discountCategory): self
     {
-        if ($this->promotionCategories->removeElement($promotionCategory)) {
+        if ($this->discountCategories->removeElement($discountCategory)) {
             // set the owning side to null (unless already changed)
-            if ($promotionCategory->getCategory() === $this) {
-                $promotionCategory->setCategory(null);
+            if ($discountCategory->getCategory() === $this) {
+                $discountCategory->setCategory(null);
+            }
+        }
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, OrderItem>
+     */
+    public function getOrderItems(): Collection
+    {
+        return $this->orderItems;
+    }
+
+    public function addOrderItem(OrderItem $orderItem): self
+    {
+        if (!$this->orderItems->contains($orderItem)) {
+            $this->orderItems[] = $orderItem;
+            $orderItem->setCategory($this);
+        }
+
+        return $this;
+    }
+
+    public function removeOrderItem(OrderItem $orderItem): self
+    {
+        if ($this->orderItems->removeElement($orderItem)) {
+            // set the owning side to null (unless already changed)
+            if ($orderItem->getCategory() === $this) {
+                $orderItem->setCategory(null);
             }
         }
 

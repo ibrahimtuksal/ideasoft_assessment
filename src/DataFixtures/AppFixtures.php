@@ -4,16 +4,17 @@ namespace App\DataFixtures;
 
 use App\Entity\Category;
 use App\Entity\Customer;
+use App\Entity\Discount\DiscountCategory;
+use App\Entity\Discount\DiscountCategoryStatus;
+use App\Entity\Discount\DiscountOrder;
 use App\Entity\Product;
-use App\Entity\PromotionBasket;
-use App\Entity\PromotionCategory;
-use App\Entity\PromotionCategoryStatus;
 use Doctrine\Bundle\FixturesBundle\Fixture;
 use Doctrine\Persistence\ObjectManager;
 
 class AppFixtures extends Fixture
 {
-    public function load(ObjectManager $manager): void
+
+    public function load(ObjectManager $manager)
     {
         $customer1 = new Customer();
         $customer1
@@ -37,10 +38,10 @@ class AppFixtures extends Fixture
 
         $category1 = new Category();
         $category1
-            ->setName("Aletler");
+            ->setName("Aletler")->setCreatedAt(new \DateTime());
         $category2 = new Category();
         $category2
-            ->setName("Elektirik");
+            ->setName("Elektirik")->setCreatedAt(new \DateTime());
 
         $manager->persist($category1);
         $manager->persist($category2);
@@ -50,31 +51,31 @@ class AppFixtures extends Fixture
             ->setName("Black&Decker A7062 40 Parça Cırcırlı Tornavida Seti")
             ->setCategory($category1)
             ->setPrice("120.75")
-            ->setStock(10);
+            ->setStock(10)->setCreatedAt(new \DateTime());
         $product2 = new Product();
         $product2
             ->setName("Reko Mini Tamir Hassas Tornavida Seti 32'li")
             ->setCategory($category1)
             ->setPrice("49.50")
-            ->setStock(10);
+            ->setStock(10)->setCreatedAt(new \DateTime());
         $product3 = new Product();
         $product3
             ->setName("Viko Karre Anahtar - Beyaz")
             ->setCategory($category2)
             ->setPrice("11.28")
-            ->setStock(10);
+            ->setStock(10)->setCreatedAt(new \DateTime());
         $product4 = new Product();
         $product4
             ->setName("Legrand Salbei Anahtar, Alüminyum")
             ->setCategory($category2)
             ->setPrice("22.80")
-            ->setStock(10);
+            ->setStock(10)->setCreatedAt(new \DateTime());
         $product5 = new Product();
         $product5
             ->setName("Schneider Asfora Beyaz Komütatör")
             ->setCategory($category2)
             ->setPrice("12.95")
-            ->setStock(10);
+            ->setStock(10)->setCreatedAt(new \DateTime());
 
         $manager->persist($product1);
         $manager->persist($product2);
@@ -83,40 +84,35 @@ class AppFixtures extends Fixture
         $manager->persist($product5);
 
         // görev 2 entityleri
-        $promotionCategoryStatus1 = new PromotionCategoryStatus();
-        $promotionCategoryStatus1->setName("THE_CHEAPEST");
-        $promotionCategoryStatus2 = new PromotionCategoryStatus();
-        $promotionCategoryStatus2->setName("RANDOM");
-        $promotionCategoryStatus3 = new PromotionCategoryStatus();
-        $promotionCategoryStatus3->setName("CHOSEN");
+        $discountCategoryStatus1 = new DiscountCategoryStatus();
+        $discountCategoryStatus1->setName("THE_CHEAPEST");
+        $discountCategoryStatus2 = new DiscountCategoryStatus();
+        $discountCategoryStatus2->setName("ONE_FREE");
+        $discountCategoryStatus3 = new DiscountCategoryStatus();
+        $discountCategoryStatus3->setName("CHOSEN");
 
-        $manager->persist($promotionCategoryStatus1);
-        $manager->persist($promotionCategoryStatus2);
-        $manager->persist($promotionCategoryStatus3);
+        $manager->persist($discountCategoryStatus1);
+        $manager->persist($discountCategoryStatus2);
+        $manager->persist($discountCategoryStatus3);
 
-        $promotionBasket = new PromotionBasket();
-        $promotionBasket->setMoneyThan("1000");
-        $promotionBasket->setPercent("10");
+        $discountOrder = new DiscountOrder();
+        $discountOrder->setMinimumAmount(1000);
+        $discountOrder->setPercent(10);
 
-        $manager->persist($promotionBasket);
+        $manager->persist($discountOrder);
 
-        $promotionCategory1 = new PromotionCategory();
-        $promotionCategory1
+        $discountCategory1 = (new DiscountCategory())
             ->setCategory($category2)
             ->setQuantity(6)
-            ->setPercent("100")
-            ->setStatus($promotionCategoryStatus2)
-            ->setHowManyProducts(1);
-        $promotionCategory2 = new PromotionCategory();
-        $promotionCategory2
+            ->setPercent(100)
+            ->setStatus($discountCategoryStatus2);
+        $discountCategory2 = (new DiscountCategory())
             ->setCategory($category1)
             ->setQuantity(2)
-            ->setPercent("20")
-            ->setStatus($promotionCategoryStatus1)
-            ->setHowManyProducts(1);
-
-        $manager->persist($promotionCategory1);
-        $manager->persist($promotionCategory2);
+            ->setPercent(20)
+            ->setStatus($discountCategoryStatus1);
+        $manager->persist($discountCategory1);
+        $manager->persist($discountCategory2);
 
         $manager->flush();
     }

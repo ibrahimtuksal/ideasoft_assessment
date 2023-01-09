@@ -2,25 +2,41 @@
 
 namespace App\Service;
 
+use App\Entity\Discount\Discount;
 use App\Entity\Order;
-use App\Entity\OrderItems;
+use App\Entity\OrderItem;
 use App\Entity\Product;
-use App\Entity\Promotion;
 use App\Type\OrderType;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpKernel\Exception\UnprocessableEntityHttpException;
 
 class OrderService
 {
-    private OrderType $orderType;
+    /**
+     * @var EntityManagerInterface
+     */
     private EntityManagerInterface $entityManager;
-    private PromotionService $promotionService;
+    /**
+     * @var DiscountService
+     */
+    private DiscountService $discountService;
+    /**
+     * @var CustomerService
+     */
+    private CustomerService $customerService;
 
-    public function __construct(OrderType $orderType, EntityManagerInterface $entityManager, PromotionService $promotionService)
+    /**
+     * @param EntityManagerInterface $entityManager
+     * @param DiscountService $discountService
+     * @param CustomerService $customerService
+     */
+    public function __construct(EntityManagerInterface $entityManager,
+                                DiscountService        $discountService,
+                                CustomerService        $customerService)
     {
-        $this->orderType = $orderType;
         $this->entityManager = $entityManager;
-        $this->promotionService = $promotionService;
+        $this->discountService = $discountService;
+        $this->customerService = $customerService;
     }
 
     /**
@@ -29,87 +45,124 @@ class OrderService
      */
     public function create($data): array
     {
-        $orderType = $this->orderType;
-        try {
-            $orderType->importFromRequest($data);
-        }catch (\Exception $e)
-        {
-            throw new UnprocessableEntityHttpException($e->getMessage());
-        }
+        $orderType = new OrderType($this->entityManager);
+        $orderType->importFromRequest($data);
 
-        $order = new Order();
-        $order->setCustomer($orderType->customer);
-        $order->setCreatedAt(new \DateTime());
+        $order = (new Order())
+            ->setCustomer($orderType->customer)
+            ->setCreatedAt(new \DateTime())
+            ->setTotal(0)
+            ->setDiscountPrice(null);
+        $this->entityManager->persist($order);
+        $this->entityManager->flush();
 
         $itemInfo = [];
         $totalPrice = 0;
         foreach ($orderType->items as $item){
-            $product = $this->entityManager->getRepository(Product::class)->find($item['productId']);
+            // gerekli kontrolleri sağlayarak sipariş itemi oluştur
+            $orderItem = $this->createOrderItem($order, $item);
+            $this->entityManager->persist($orderItem);
 
-            if (!$product instanceof Product){
-                throw new UnprocessableEntityHttpException("PRODUCT_NOT_FOUND");
-            }
+            // ürünün miktarına göre fiyatını hesapla
+            $productTotalPrice = $this->calculateProductPriceByQuantity($orderItem->getProduct(), $item['quantity']);
 
-            if ($product->getStock() >= $item['quantity']){
-                $product->setStock($product->getStock() - $item['quantity']);
-            }else{
-                throw new UnprocessableEntityHttpException("PRODUCT_STOCK_NOT_FOUND");
-            }
-
-            $productTotalPrice = $product->getPrice() * $item['quantity'];
+            // ürünün miktarına göre apply tutarını güncelle
             $totalPrice += $productTotalPrice;
 
-            $orderItem = new OrderItems();
-            $order->addOrderItem($orderItem);
-            $orderItem
-                ->setProduct($product)
-                ->setQuantity($item['quantity']);
-
             $itemInfo[] = [
-                "productId"=> $product->getId(),
-                "quantity"=> $item['quantity'],
-                "unitPrice"=> $product->getPrice(),
+                "productId" => $orderItem->getProduct()->getId(),
+                "quantity" => $item['quantity'],
+                "unitPrice" => $orderItem->getProduct()->getPrice(),
                 "total"=> $productTotalPrice
             ];
-
-            $this->entityManager->persist($orderItem);
         }
 
-
-        $order->setTotalPrice($totalPrice);
-
-        $orderType->customer->setRevenue($orderType->customer->getRevenue() + $totalPrice);
-        $categoryTotalDiscount = $this->promotionService->categoryControl($order);
-        $promotion = $this->promotionService->basketControl($order);
-
-        $order
-            ->setDiscountPrice(is_null($promotion) ? $promotion : $totalPrice - ( ($totalPrice / 100) * $promotion->getBasket()->getPercent() ));
-
-        if($promotion instanceof Promotion){
-            $order->setDiscountPrice($order->getDiscountPrice() - $categoryTotalDiscount);
-            $this->entityManager->persist($promotion);
-        }else{
-            $order->setDiscountPrice($order->getTotalPrice() - $categoryTotalDiscount);
-
-        }
-
-        $this->entityManager->persist($order);
+        // sipariş tutarı
+        $order->setTotal($totalPrice);
         $this->entityManager->flush();
-
+        // müşteri toplam harcamayı güncelle
+        $this->customerService->updateRevenueForCustomer($orderType->customer, $totalPrice);
+        // halihazırda aktif olan indirimleri kontrol et var ise indirimleri uygula
+        $discountedAmount = $this->applyDiscount($this->discountService->apply($order));
+        // indirimi sipariş objesine set et
+        $order->setDiscountPrice($discountedAmount);
+        // işlemleri veritabanına yansıt
+        $this->entityManager->flush();
         return
             [
                 "id" => $order->getId(),
                 "customerId"=> $orderType->customer->getId(),
                 "items"=> $itemInfo,
-                "totalPrice" => $order->getTotalPrice(),
+                "totalPrice" => $order->getTotal(),
                 "discountPrice" => $order->getDiscountPrice(),
-                "promotionId" => is_null($promotion) ? $promotion : $promotion->getId(),
-                "categoryPromotionTotalDiscount" => $categoryTotalDiscount
             ];
     }
 
-    public function delete(Order $order): array
+    /**
+     * @param Order $order
+     * @param $item
+     * @return OrderItem
+     */
+    public function createOrderItem(Order $order, $item): OrderItem
     {
+        /** @var Product $product */
+        $product = $this->entityManager->getRepository(Product::class)->find($item['productId']);
+
+        if (!$product instanceof Product){
+            throw new UnprocessableEntityHttpException("PRODUCT_NOT_FOUND");
+        }
+
+        // stok kontrolü yapılarak stoktan düşülebilir mi diye kontrol edip stoktan düşüyor, eğer stok yok ise hata mesajı fırlatıyor
+        if ($this->stockControlForQuantity($product, $item['quantity'])){
+            $product->setStock($product->getStock() - $item['quantity']);
+        }else {throw new UnprocessableEntityHttpException("PRODUCT_STOCK_NOT_FOUND");}
+
+        //üründen kaç adet istediyse fiyatı çarpıp toplam fiyatı alıyor
+        $productTotalPrice = $this->calculateProductPriceByQuantity($product, $item['quantity']);
+
+        return (new OrderItem())
+            ->setProduct($product)
+            ->setCreatedAt(new \DateTime())
+            ->setCategory($product->getCategory())
+            ->setQuantity($item['quantity'])
+            ->setOrderId($order)
+            ->setTotal($productTotalPrice)
+            ->setUnitPrice( $product->getPrice() );
+    }
+
+    /**
+     * @param Product $product
+     * @param $quantity
+     * @return bool
+     */
+    public function stockControlForQuantity(Product $product, $quantity): bool
+    {
+        if ($product->getStock() >= $quantity){
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * @param Product $product
+     * @param $quantity
+     * @return float
+     */
+    public function calculateProductPriceByQuantity(Product $product, $quantity): float
+    {
+        return $product->getPrice() * $quantity;
+    }
+
+    /**
+     * @param int $order
+     * @return array
+     */
+    public function delete(int $order): array
+    {
+        $order = $this->entityManager->getRepository(Order::class)->find($order);
+        if (!$order instanceof Order){
+            throw new UnprocessableEntityHttpException('ORDER_NOT_FOUND');
+        }
         $order->setDeletedAt(new \DateTime());
 
         $this->entityManager->flush();
@@ -119,16 +172,25 @@ class OrderService
             'message' => 'ORDER_DELETED',
             'response' => [
                 'id' => $order->getId(),
-                'createdAt' => $order->getCreatedAt()->format("Y-m-d H:i"),
+                'deletedAt' => $order->getCreatedAt()->format("Y-m-d H:i"),
             ]
         ];
     }
 
-    public function list(Order $order): array
+    /**
+     * @param int $order
+     * @return array
+     */
+    public function list(int $order): array
     {
+        $order = $this->entityManager->getRepository(Order::class)->find($order);
+        if (!$order instanceof Order){
+            throw new UnprocessableEntityHttpException('ORDER_NOT_FOUND');
+        }
+
         $item = [];
 
-        /** @var OrderItems $orderItem */
+        /** @var OrderItem $orderItem */
         foreach ($order->getOrderItems() as $orderItem){
             $item[] = [
                 'product' => $orderItem->getProduct()->getName(),
@@ -146,8 +208,50 @@ class OrderService
                 'name' => $order->getCustomer()->getName(),
             ],
             'items' => $item,
-            'totalPrice' => $order->getTotalPrice(),
+            'totalPrice' => $order->getTotal(),
             'discountPrice' => $order->getDiscountPrice()
         ];
+    }
+
+    /**
+     * @param array $discounts
+     * @return float|null
+     */
+    public function applyDiscount(array $discounts): ?float
+    {
+        $categoryDiscountedAmount = $this->applyCategoryDiscount($discounts['category']);
+        $orderDiscountedAmount = $this->applyOrderDiscount($discounts['order']);
+
+        return $categoryDiscountedAmount + $orderDiscountedAmount;
+    }
+
+    /**
+     * @param array $discounts
+     * @return float|null
+     */
+    public function applyCategoryDiscount(array $discounts): ?float
+    {
+        $discountedAmount = 0.0;
+        /** @var Discount $discount */
+        foreach ($discounts as $discount)
+        {
+            $discountedAmount += $discount->getAmount();
+        }
+        return $discountedAmount;
+    }
+
+    /**
+     * @param array $discounts
+     * @return float|null
+     */
+    public function applyOrderDiscount(array $discounts): ?float
+    {
+        $discountedAmount = 0.0;
+        /** @var Discount $discount */
+        foreach ($discounts as $discount)
+        {
+            $discountedAmount += $discount->getAmount();
+        }
+        return $discountedAmount;
     }
 }

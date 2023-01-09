@@ -2,8 +2,6 @@
 
 namespace App\Entity;
 
-use Doctrine\Common\Collections\ArrayCollection;
-use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
 
 /**
@@ -29,19 +27,9 @@ class Customer
     private $since;
 
     /**
-     * @ORM\Column(type="string", length=255)
+     * @ORM\Column(type="float", nullable=true)
      */
     private $revenue;
-
-    /**
-     * @ORM\OneToMany(targetEntity=Order::class, mappedBy="customer")
-     */
-    private $orders;
-
-    public function __construct()
-    {
-        $this->orders = new ArrayCollection();
-    }
 
     public function getId(): ?int
     {
@@ -72,43 +60,14 @@ class Customer
         return $this;
     }
 
-    public function getRevenue(): ?string
+    public function getRevenue(): ?float
     {
         return $this->revenue;
     }
 
-    public function setRevenue(string $revenue): self
+    public function setRevenue(?float $revenue): self
     {
         $this->revenue = $revenue;
-
-        return $this;
-    }
-
-    /**
-     * @return Collection<int, Order>
-     */
-    public function getOrders(): Collection
-    {
-        return $this->orders;
-    }
-
-    public function addOrder(Order $order): self
-    {
-        if (!$this->orders->contains($order)) {
-            $this->orders[] = $order;
-            $order->setCustomer($this);
-        }
-
-        return $this;
-    }
-
-    public function removeOrder(Order $order): self
-    {
-        if ($this->orders->removeElement($order)) {
-            if ($order->getCustomer() === $this) {
-                $order->setCustomer(null);
-            }
-        }
 
         return $this;
     }

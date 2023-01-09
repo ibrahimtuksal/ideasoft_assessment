@@ -53,17 +53,11 @@ Sunucuyu **symfony** ile çalıştırın
   POST /order/add
 ```
 
-| Parametre | Tip     | Açıklama                |
-| :-------- | :------- | :------------------------- |
-| `customer` | `integer` | Müşteri id |
-| `items` | `array` | Dizi olarak çoklu ürün alır |
-| `productId ` | `integer` | Ürün id |
-| `quantity ` | `integer` | Ürün miktarı |
 
-#### Örnek json
+#### Örnek Request
 ```javascript
 {
-  "customer": 5,
+  "customer": 3,
   "items": [
           {
               "productId": 1,
@@ -76,6 +70,38 @@ Sunucuyu **symfony** ile çalıştırın
       ]
 }
 ```
+
+#### Örnek Response
+```javascript
+{
+    "id": 1,
+        "customerId": 3,
+        "items": [
+        {
+            "productId": 4,
+            "quantity": 1,
+            "unitPrice": 22.8,
+            "total": 22.8
+        },
+        {
+            "productId": 1,
+            "quantity": 4,
+            "unitPrice": 120.75,
+            "total": 483
+        }
+    ],
+        "totalPrice": 505.8,
+        "discountPrice": 22.8
+}
+```
+
+| Parametre | Tip     | Açıklama                |
+| :-------- | :------- | :------------------------- |
+| `customer` | `integer` | Müşteri id |
+| `items` | `array` | Dizi olarak çoklu ürün alır |
+| `productId ` | `integer` | Ürün id |
+| `quantity ` | `integer` | Ürün miktarı |
+
 
 
 #### Sipariş Sil
@@ -95,7 +121,7 @@ Sunucuyu **symfony** ile çalıştırın
     "message": "ORDER_DELETED",
     "response": {
         "id": 1,
-        "createdAt": "2022-09-08 19:50"
+        "deletedAt": "2022-09-08 19:50"
     }
 }
 ```
@@ -138,11 +164,5 @@ Sunucuyu **symfony** ile çalıştırın
     "discountPrice": "258.6"
 }
 ```
-  
-## Kullanılan Teknolojiler
-
-**Framework:** Symfony5
-
-**Genel Olarak Paketler:** symfony/validator, nelmio/api-doc-bundle, doctrine/orm
 
   

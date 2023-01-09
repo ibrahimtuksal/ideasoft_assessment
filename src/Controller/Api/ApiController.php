@@ -17,35 +17,27 @@ use Symfony\Component\Routing\Annotation\Route;
  */
 class ApiController extends AbstractController
 {
-
-    private EntityManagerInterface $entityManager;
-    private ResponseService $responseService;
-    private OrderService $orderService;
-
-    public function __construct(EntityManagerInterface $entityManager, ResponseService $responseService, OrderService $orderService)
-    {
-        $this->entityManager = $entityManager;
-        $this->responseService = $responseService;
-        $this->orderService = $orderService;
-    }
-
     /**
      * @Route("/add", methods={"POST"})
      * @OA\Response(
-     *     response=200,
+     *     response=201,
      *     description="Returns the resulting order",
      * )
      * @OA\Tag(name="Order")
+     * @param Request $request
+     * @param OrderService $orderService
+     * @param ResponseService $responseService
+     * @return Response
      */
-    public function add(Request $request): Response
+    public function add(Request $request, OrderService $orderService, ResponseService $responseService): Response
     {
         try {
-            $response = $this->orderService->create(json_decode($request->getContent(), true));
+            $response = $orderService->create(json_decode($request->getContent(), true));
         }catch (\Exception $e){
-            return $this->responseService->create($e->getMessage());
+            $response = $e->getMessage();
         }
 
-        return $this->responseService->create($response);
+        return $responseService->create($response);
     }
 
     /**
@@ -56,18 +48,18 @@ class ApiController extends AbstractController
      * )
      * @OA\Tag(name="Order")
      * @param int $order
+     * @param ResponseService $responseService
+     * @param OrderService $orderService
      * @return Response
      */
-    public function delete(int $order): Response
+    public function delete(int $order, ResponseService $responseService, OrderService $orderService): Response
     {
-        /** @var Order $order */
-        $order = $this->entityManager->getRepository(Order::class)->findOneBy(['deletedAt' => null, 'id' => $order]);
-
-        if (!$order instanceof Order){
-            return $this->responseService->create("ORDER_NOT_FOUND");
+        try {
+            $response = $orderService->delete($order);
+        }catch (\Exception $exception){
+            $response = $exception->getMessage();
         }
-
-        return $this->responseService->create($this->orderService->delete($order));
+        return $responseService->create($response);
     }
 
     /**
@@ -78,17 +70,12 @@ class ApiController extends AbstractController
      * )
      * @OA\Tag(name="Order")
      * @param int $order
+     * @param ResponseService $responseService
+     * @param OrderService $orderService
      * @return Response
      */
-    public function listing(int $order)
+    public function listing(int $order, ResponseService $responseService, OrderService $orderService): Response
     {
-        /** @var Order $order */
-        $order = $this->entityManager->getRepository(Order::class)->findOneBy(['deletedAt' => null, 'id' => $order]);
-
-        if (!$order instanceof Order){
-            return $this->responseService->create("ORDER_NOT_FOUND");
-        }
-
-        return $this->responseService->create($this->orderService->list($order));
+        return $responseService->create($orderService->list($order));
     }
 }

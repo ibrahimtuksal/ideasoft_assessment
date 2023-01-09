@@ -2,6 +2,7 @@
 
 namespace App\Entity;
 
+use App\Entity\Discount\Discount;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
@@ -12,6 +13,8 @@ use Doctrine\ORM\Mapping as ORM;
  */
 class Order
 {
+    use Timestamp;
+
     /**
      * @ORM\Id
      * @ORM\GeneratedValue
@@ -20,20 +23,25 @@ class Order
     private $id;
 
     /**
-     * @ORM\ManyToOne(targetEntity=Customer::class, inversedBy="orders")
+     * @ORM\ManyToOne(targetEntity=Customer::class)
      * @ORM\JoinColumn(nullable=false)
      */
     private $customer;
 
     /**
-     * @ORM\OneToMany(targetEntity=OrderItems::class, mappedBy="orderId")
+     * @ORM\OneToMany(targetEntity=OrderItem::class, mappedBy="orderId")
      */
-    private $orderItems;
+    private $orderItem;
 
     /**
-     * @ORM\Column(type="datetime")
+     * @ORM\Column(type="float")
      */
-    private $createdAt;
+    private $total;
+
+    /**
+     * @ORM\Column(type="float", nullable=true)
+     */
+    private $discountPrice;
 
     /**
      * @ORM\Column(type="datetime", nullable=true)
@@ -41,24 +49,14 @@ class Order
     private $deletedAt;
 
     /**
-     * @ORM\Column(type="string")
+     * @ORM\OneToMany(targetEntity=Discount::class, mappedBy="orders")
      */
-    private $totalPrice;
-
-    /**
-     * @ORM\Column(type="string", nullable=true)
-     */
-    private $discountPrice;
-
-    /**
-     * @ORM\OneToMany(targetEntity=Promotion::class, mappedBy="orderId")
-     */
-    private $promotions;
+    private $discounts;
 
     public function __construct()
     {
-        $this->orderItems = new ArrayCollection();
-        $this->promotions = new ArrayCollection();
+        $this->orderItem = new ArrayCollection();
+        $this->discounts = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -66,12 +64,12 @@ class Order
         return $this->id;
     }
 
-    public function getCustomer(): ?Customer
+    public function getCustomer(): ?customer
     {
         return $this->customer;
     }
 
-    public function setCustomer(?Customer $customer): self
+    public function setCustomer(?customer $customer): self
     {
         $this->customer = $customer;
 
@@ -79,42 +77,43 @@ class Order
     }
 
     /**
-     * @return Collection<int, OrderItems>
+     * @return Collection<int, OrderItem>
      */
     public function getOrderItems(): Collection
     {
-        return $this->orderItems;
+        return $this->orderItem;
     }
 
-    public function addOrderItem(OrderItems $orderItem): self
+    public function addOrderItem(OrderItem $orderItem): self
     {
-        if (!$this->orderItems->contains($orderItem)) {
-            $this->orderItems[] = $orderItem;
+        if (!$this->orderItem->contains($orderItem)) {
+            $this->orderItem[] = $orderItem;
             $orderItem->setOrderId($this);
         }
 
         return $this;
     }
 
-    public function removeOrderItem(OrderItems $orderItem): self
+    public function getTotal(): ?float
     {
-        if ($this->orderItems->removeElement($orderItem)) {
-            if ($orderItem->getOrderId() === $this) {
-                $orderItem->setOrderId(null);
-            }
-        }
+        return $this->total;
+    }
+
+    public function setTotal(float $total): self
+    {
+        $this->total = $total;
 
         return $this;
     }
 
-    public function getCreatedAt(): ?\DateTimeInterface
+    public function getDiscountPrice(): ?float
     {
-        return $this->createdAt;
+        return $this->discountPrice;
     }
 
-    public function setCreatedAt(\DateTimeInterface $createdAt): self
+    public function setDiscountPrice(?float $discountPrice): self
     {
-        $this->createdAt = $createdAt;
+        $this->discountPrice = $discountPrice;
 
         return $this;
     }
@@ -131,54 +130,30 @@ class Order
         return $this;
     }
 
-    public function getTotalPrice(): ?string
-    {
-        return $this->totalPrice;
-    }
-
-    public function setTotalPrice(string $totalPrice): self
-    {
-        $this->totalPrice = $totalPrice;
-
-        return $this;
-    }
-
-    public function getDiscountPrice(): ?string
-    {
-        return $this->discountPrice;
-    }
-
-    public function setDiscountPrice(?string $discountPrice): self
-    {
-        $this->discountPrice = $discountPrice;
-
-        return $this;
-    }
-
     /**
-     * @return Collection<int, Promotion>
+     * @return Collection<int, Discount>
      */
-    public function getPromotions(): Collection
+    public function getDiscounts(): Collection
     {
-        return $this->promotions;
+        return $this->discounts;
     }
 
-    public function addPromotion(Promotion $promotion): self
+    public function addDiscount(Discount $discount): self
     {
-        if (!$this->promotions->contains($promotion)) {
-            $this->promotions[] = $promotion;
-            $promotion->setOrderId($this);
+        if (!$this->discounts->contains($discount)) {
+            $this->discounts[] = $discount;
+            $discount->setOrders($this);
         }
 
         return $this;
     }
 
-    public function removePromotion(Promotion $promotion): self
+    public function removeDiscount(Discount $discount): self
     {
-        if ($this->promotions->removeElement($promotion)) {
+        if ($this->discounts->removeElement($discount)) {
             // set the owning side to null (unless already changed)
-            if ($promotion->getOrderId() === $this) {
-                $promotion->setOrderId(null);
+            if ($discount->getOrders() === $this) {
+                $discount->setOrders(null);
             }
         }
 

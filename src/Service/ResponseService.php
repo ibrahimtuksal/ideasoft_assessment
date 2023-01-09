@@ -7,13 +7,24 @@ use Symfony\Component\Serializer\SerializerInterface;
 
 class ResponseService
 {
+    /**
+     * @var SerializerInterface
+     */
     private SerializerInterface $serializer;
 
+    /**
+     * @param SerializerInterface $serializer
+     */
     public function __construct(SerializerInterface $serializer)
     {
         $this->serializer = $serializer;
     }
 
+    /**
+     * @param $data
+     * @param bool $json
+     * @return Response
+     */
     public function create($data, bool $json = false): Response
     {
         if ($json){

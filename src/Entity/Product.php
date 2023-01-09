@@ -2,6 +2,7 @@
 
 namespace App\Entity;
 
+use App\Entity\Discount\Discount;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
@@ -11,6 +12,8 @@ use Doctrine\ORM\Mapping as ORM;
  */
 class Product
 {
+    use Timestamp;
+
     /**
      * @ORM\Id
      * @ORM\GeneratedValue
@@ -24,13 +27,7 @@ class Product
     private $name;
 
     /**
-     * @ORM\ManyToOne(targetEntity=Category::class, inversedBy="products")
-     * @ORM\JoinColumn(nullable=false)
-     */
-    private $category;
-
-    /**
-     * @ORM\Column(type="string", length=255)
+     * @ORM\Column(type="float", scale=2)
      */
     private $price;
 
@@ -40,13 +37,19 @@ class Product
     private $stock;
 
     /**
-     * @ORM\OneToMany(targetEntity=OrderItems::class, mappedBy="product")
+     * @ORM\ManyToOne(targetEntity=Category::class)
+     * @ORM\JoinColumn(nullable=false)
      */
-    private $orderItems;
+    private $category;
+
+    /**
+     * @ORM\OneToMany(targetEntity=Discount::class, mappedBy="applicableProduct")
+     */
+    private $discounts;
 
     public function __construct()
     {
-        $this->orderItems = new ArrayCollection();
+        $this->discounts = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -66,24 +69,12 @@ class Product
         return $this;
     }
 
-    public function getCategory(): ?Category
-    {
-        return $this->category;
-    }
-
-    public function setCategory(?Category $category): self
-    {
-        $this->category = $category;
-
-        return $this;
-    }
-
-    public function getPrice(): ?string
+    public function getPrice(): ?float
     {
         return $this->price;
     }
 
-    public function setPrice(string $price): self
+    public function setPrice(float $price): self
     {
         $this->price = $price;
 
@@ -102,32 +93,23 @@ class Product
         return $this;
     }
 
+    public function getCategory(): ?category
+    {
+        return $this->category;
+    }
+
+    public function setCategory(?category $category): self
+    {
+        $this->category = $category;
+
+        return $this;
+    }
+
     /**
-     * @return Collection<int, OrderItems>
+     * @return Collection<int, Discount>
      */
-    public function getOrderItems(): Collection
+    public function getDiscounts(): Collection
     {
-        return $this->orderItems;
-    }
-
-    public function addOrderItem(OrderItems $orderItem): self
-    {
-        if (!$this->orderItems->contains($orderItem)) {
-            $this->orderItems[] = $orderItem;
-            $orderItem->setProduct($this);
-        }
-
-        return $this;
-    }
-
-    public function removeOrderItem(OrderItems $orderItem): self
-    {
-        if ($this->orderItems->removeElement($orderItem)) {
-            if ($orderItem->getProduct() === $this) {
-                $orderItem->setProduct(null);
-            }
-        }
-
-        return $this;
+        return $this->discounts;
     }
 }
